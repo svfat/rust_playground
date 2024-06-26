@@ -8,19 +8,22 @@ struct ThreadControl {
     stop_flag: Arc<AtomicBool>,
 }
 
+fn spawn_thread(n: usize, stop_flag: Arc<AtomicBool>) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        println!("Thread #{} started", n);
+        while !stop_flag.load(Ordering::SeqCst) {
+            println!("I am thread #{}", n);
+            thread::sleep(Duration::from_secs(1));
+        }
+        println!("Thread #{} stopped", n);
+    })
+}
+
 fn main() {
     let mut thread_controls = vec![];
     for n in 0..=5 {
         let stop_flag = Arc::new(AtomicBool::new(false));
-        let stop_flag_clone: Arc<AtomicBool> = Arc::clone(&stop_flag);
-        let handle = thread::spawn(move || {
-            println!("Thread {n} started");
-            while !stop_flag_clone.load(Ordering::SeqCst) {
-                println!("{n}");
-                thread::sleep(Duration::from_secs(1));
-            }
-            println!("Thread {n} stopped")
-        });
+        let handle = spawn_thread(n, Arc::clone(&stop_flag));
         thread_controls.push(ThreadControl{ handle, stop_flag });
     }
 
